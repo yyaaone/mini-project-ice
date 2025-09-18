@@ -1,0 +1,60 @@
+// b1 เป็น board ส่ง
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(11,10);
+
+#define switch1 4
+#define switch2 5
+#define switch3 6
+
+#define LED1 9
+#define LED2 8
+#define LED3 7
+
+void setup()
+{
+  Serial.begin(9600);
+  mySerial.begin(9600);
+
+  pinMode(switch1,INPUT_PULLUP);//High to Low
+  pinMode(switch2,INPUT_PULLUP);
+  pinMode(switch3,INPUT_PULLUP);
+  
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  
+  // pinMode(11,OUTPUT); ส่งข้อมูล 10 รับข้อมูล 
+    
+}
+
+void loop()
+{
+  char c = mySerial.read();
+
+  int read1 = digitalRead(switch1);
+  int read2 = digitalRead(switch2);
+  int read3 = digitalRead(switch3);
+  
+  if(read1==0){
+  	digitalWrite(LED1,1);
+    delay(300);
+    Serial.println("1");
+    // digitalWrite(11,11);
+    mySerial.println("switch1");
+  }else{digitalWrite(LED1,0);}
+  
+  if(read2==0){
+  	digitalWrite(LED2,1);
+    delay(300);
+    Serial.println("2");
+    mySerial.println("switch2");
+  }else{digitalWrite(LED2,0);}
+  
+  if(read3==0){
+  	digitalWrite(LED3,1);
+    delay(300);
+    Serial.println("3");
+    mySerial.println("switch3");
+  }else{digitalWrite(LED3,0);}
+}
