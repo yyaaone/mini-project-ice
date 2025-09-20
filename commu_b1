@@ -1,0 +1,194 @@
+// b1 เป็น board ส่ง
+//switch debounce FSM LED
+//ส่ง text เป็น play stop next before
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(11,10);
+
+enum {defa,next,before,play,stop};
+
+#define button_next 6
+#define button_play 5
+#define button_before 4
+
+#define LED1 9
+#define LED2 8
+#define LED3 7
+
+struct state{
+  int current_state;
+  unsigned long next_state[3];
+};
+
+typedef const struct state stype;
+
+//แก้เหลือแค่ 3 ตั้ง next state ตาม input ที่ได้เลย
+stype FSM[5] = {  
+  defa,{next,stop,before},  
+  next,{next,play,before},
+  before,{next,play,before},
+  play,{next,stop,before},
+  stop,{next,play,before},
+};
+
+// ปุ่ม
+int buttonState_play = HIGH;
+int lastButtonState_play = HIGH;
+int buttonState_next = HIGH;
+int lastButtonState_next = HIGH;
+int buttonState_before = HIGH;
+int lastButtonState_before = HIGH;
+
+unsigned long lastDebounceTime_play = 0;
+unsigned long lastDebounceTime_next = 0;
+unsigned long lastDebounceTime_before = 0;
+unsigned long debounceDelay = 50;
+
+bool isNext = 0;
+bool isBefore = 0;
+bool isPlay = 0;  // toggle
+
+int current_song = 0;
+int cstate = 0;
+int checkstate = 0;
+
+void setup()
+{
+  Serial.begin(9600);
+  mySerial.begin(9600);
+
+  pinMode(button_next , INPUT_PULLUP); //Active Low : High->Low
+  pinMode(button_before , INPUT_PULLUP);
+  pinMode(button_play , INPUT_PULLUP);
+  
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  
+  // pinMode(11,OUTPUT); ส่งข้อมูล 10 รับข้อมูล 
+    
+}
+
+void loop()
+{
+  
+
+  int read_before = digitalRead(button_before);
+  int read_play   = digitalRead(button_play);
+  int read_next   = digitalRead(button_next);
+
+  if(read_before==1){
+    digitalWrite(LED1,1);
+    delay(300);
+    Serial.println("Before");
+
+    //debounce before
+    int reading_before = digitalRead(button_before);
+      if(reading_before != lastButtonState_before){
+        lastDebounceTime_before = millis();
+      }
+      if((millis()-lastDebounceTime_before > debounceDelay)){
+        if(reading_before != buttonState_before){
+          buttonState_before = reading_before;
+          if(buttonState_before == LOW){
+            isBefore = 1;
+          }
+        }
+      }
+      lastButtonState_before = reading_before;
+
+      
+    mySerial.print("before"); //Before switch1  
+    // digitalWrite(11,11);
+    if(isBefore == 1){
+        current_song = (current_song+2)%3;
+        Serial.print("Current song = "); Serial.println(current_song);
+        Serial.println("State before");
+        isBefore = 0;
+        mySerial.print(","); //ไว้ใช้เป็นตัวตัดขั้น
+        mySerial.println(current_song);              
+      }
+  }else{digitalWrite(LED1,0);}
+  
+  //Play/Stop switch2
+  if(read_play==1){
+    digitalWrite(LED2,1);
+    delay(300);
+    Serial.println("2");
+    int reading_play = digitalRead(button_play);
+      if (reading_play != lastButtonState_play){
+        lastDebounceTime_play = millis();
+      }
+      if ((millis() - lastDebounceTime_play)> debounceDelay){
+        if(reading_play != buttonState_play){
+          buttonState_play = reading_play;
+          if(buttonState_play == LOW){ 
+            isPlay = !isPlay;  // toggle
+            if(isPlay == 0){
+              // noTone(SpeakerPin);
+              cstate = stop;     // sync FSM
+              Serial.println("stop");
+              mySerial.print("stop");
+              mySerial.print(";");
+              mySerial.print("0");
+            }
+            else{
+              cstate = play; 
+              // Serial.println("play");
+              // mySerial.print("play");
+            }
+          }
+        }
+      }
+      lastButtonState_play = reading_play;
+      if(isPlay == 1){
+        if(FSM[cstate].current_state == play){
+          Serial.println("State play");
+          mySerial.println("play");
+          mySerial.print(",");
+          mySerial.println(current_song);
+        }
+        if(checkstate != 1){
+          read_before = !digitalRead(button_before);
+          read_play   = !digitalRead(button_play);
+          read_next   = !digitalRead(button_next);
+
+          int input = -1;
+          if(read_next)   input = 0;
+          else if(read_play)   input = 1;
+          else if(read_before) input = 2;
+
+          cstate = FSM[cstate].next_state[input];
+        }
+      }
+      checkstate = 0;
+  }else{digitalWrite(LED2,0);}
+  
+  //button next
+  if(read_next==1){
+    digitalWrite(LED3,1);
+    delay(300);
+    Serial.println("Next");
+    if(read_next != lastButtonState_next){
+        lastDebounceTime_next= millis();
+      }
+    if((millis()-lastDebounceTime_next)>debounceDelay){
+      if(read_next != buttonState_next){
+        buttonState_next = read_next;
+        if(buttonState_next == LOW){
+          isNext = 1;
+        }
+      }
+    }
+    lastButtonState_next = read_next;
+  
+    mySerial.print("next"); //Next switch
+    if(isNext == 1){
+      current_song = (current_song+1)%3;
+      Serial.print("Current song = "); Serial.println(current_song);
+      Serial.println("State next");
+      mySerial.print(",");
+      mySerial.println(current_song);
+    }
+  }else{digitalWrite(LED3,0);}
+}
