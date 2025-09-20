@@ -1,0 +1,154 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(11,10);
+
+enum {frist_idle,idle,next,before,frist_play,play,frist_stop,stop};
+
+enum {back_to_idle,BT_before,BT_play_stop,BT_next,end_music};
+
+#define num_of_song 3 //-------------add song
+
+#define button_next 6
+#define button_play 5
+#define button_before 4
+
+#define LED1 7
+#define LED2 8
+#define LED3 9
+
+struct state{
+  unsigned long next_state[5];
+};
+
+typedef const struct state stype;
+
+//แก้เหลือแค่ 3 ตั้ง next state ตาม input ที่ได้เลย
+stype FSM[8] = {  
+  {idle,idle,idle,idle,frist_idle},                //frist_idle
+  {idle,next,frist_play,before,frist_idle},        //idle  
+  {frist_idle,next,frist_play,before,frist_idle},  //next
+  {frist_idle,next,frist_play,before,frist_idle},  //before
+  {play,play,play,play,frist_idle},                //frist_play
+  {play,next,frist_stop,before,frist_idle},        //play
+  {stop,stop,stop,stop,frist_idle},                //frist_stop
+  {stop,next,frist_play,before,frist_idle},        //stop
+  
+};
+
+int current_song = 0;
+int current_state = 0;
+
+void state_running()
+{
+  switch(current_state)
+  {
+    case next:
+      digitalWrite(LED1,0);
+      digitalWrite(LED2,0);
+      digitalWrite(LED3,1);
+      
+      Serial.println("next");
+      current_song = (current_song+1)%num_of_song;
+      Serial.print("Current song = "); Serial.println(current_song);
+      Serial.println("State next");
+      mySerial.print("next");
+      mySerial.print(",");
+      mySerial.println(current_song);
+
+      break;
+    case before:
+      digitalWrite(LED1,1);
+      digitalWrite(LED2,0);
+      digitalWrite(LED3,0);
+      
+      Serial.println("before");
+      current_song = (current_song-1+num_of_song)%num_of_song;
+      Serial.print("Current song = "); 
+      Serial.println(current_song);
+      Serial.println("State before");
+      mySerial.print("before"); 
+      mySerial.print(","); //ไว้ใช้เป็นตัวตัดขั้น
+      mySerial.println(current_song);  
+
+      break;
+    case frist_play:
+      digitalWrite(LED1,0);
+      digitalWrite(LED2,1);
+      digitalWrite(LED3,0);
+      Serial.println("play");
+      mySerial.print("play"); 
+      break;
+    case frist_idle:
+      Serial.println("frist_idle");
+      digitalWrite(LED1,0);
+      digitalWrite(LED2,0);
+      digitalWrite(LED3,0);
+      mySerial.println("idle");
+      break;
+    case frist_stop:
+      digitalWrite(LED1,0);
+      digitalWrite(LED2,0);
+      digitalWrite(LED3,0);
+      Serial.println("stop");
+      mySerial.print("stop"); 
+      break;
+    default:
+      break;
+      
+  }
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  mySerial.begin(9600);
+
+  pinMode(button_next , INPUT); //Active Low : High->Low
+  pinMode(button_before , INPUT);
+  pinMode(button_play , INPUT);
+  
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  
+  // pinMode(11,OUTPUT); ส่งข้อมูล 10 รับข้อมูล 
+    
+}
+void loop()
+{
+  int reading_before = digitalRead(button_before);
+  int reading_play   = digitalRead(button_play);
+  int reading_next   = digitalRead(button_next);
+
+  if(reading_play)
+  {
+    current_state=FSM[current_state].next_state[BT_play_stop];
+    delay(200);
+    while(digitalRead(button_play));
+  }
+  else if(reading_next)
+  {
+    current_state=FSM[current_state].next_state[BT_next];
+    delay(200);
+    while(digitalRead(button_next));
+  }
+  else if(reading_before)
+  {
+    current_state=FSM[current_state].next_state[BT_before];
+    delay(200);
+    while(digitalRead(button_before));
+  }
+  else
+  {
+    current_state=FSM[current_state].next_state[back_to_idle];
+  }
+  if(mySerial.available())
+  {
+    String text = mySerial.readString();
+    Serial.println("Stop");
+    current_state=FSM[current_state].next_state[end_music];
+  }
+  state_running();
+}
+
+
