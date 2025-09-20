@@ -1,0 +1,277 @@
+//buzzer 7-segment
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(11,10);
+
+const int SpeakerPin = 6;
+
+enum {defa,next,before,play,stop};
+
+int song[] = {0,1,2};
+// int current_song = 0; //รับมาจาก b1
+
+int NooMaLee[] = {330,294,262,294,330,330,330,294,294,294,330,392,392,330,294,262,294,330,330,330,294,294,330,294,262};
+const int numNooMaLee = 25;
+
+int HBD[] = {262,262,294,262,339,330,262,262,294,262,339,330,262,262,523,440,349,330,294,262,494,494,440,349,392,349};
+const int numHBD = 26;
+
+int LittleStar[] = {392,392,587,587,659,659,587,523,523,494,494,440,440,392,
+                    587,587,523,523,494,494,440,587,587,523,523,494,494,440,
+                    392,392,587,587,659,659,587,523,523,494,494,440,440,392};
+const int numLittleStar = 42;
+
+int bitPattern[] = {
+  0b11111001,  // 1
+  0b10100100,  // 2
+  0b10110000,  // 3 
+};
+
+const byte numPins = 8;
+const int segmentPins[9]= {9,8,4,5,7,12,13};
+
+//state เริ่มต้นเป็น defa
+int cstate = 0;
+int checkstate = 0;
+
+int input = -1;
+
+// --- ฟังก์ชันเพลง ---
+void current_song0(){
+  for(int i=0;i<numNooMaLee;i++){
+    tone(SpeakerPin, NooMaLee[i]);
+
+    if(mySerial.available()){
+      String stop = mySerial.readStringUntil('\n');
+      stop.trim();
+
+      int index_stop = stop.indexOf(';');
+      String button_stop = stop.substring(0,index_stop);
+      String isPlaying = stop.substring(index_stop +1);
+      int isPlay = isPlaying.toInt();
+
+      if(isPlay = 0 || button_stop == stop){
+      noTone(SpeakerPin);
+      break;
+      }
+    }
+    
+    delay(200);
+    noTone(SpeakerPin);
+    delay(100);
+
+    // อ่านปุ่ม
+    if(mySerial.available()){
+      String data_0 = mySerial.readStringUntil('\n');
+      data_0.trim();
+
+      int index_song0 =data_0.indexOf(',');
+      String button_song0 = data_0.substring(0,index_song0);
+      // String current = data.substring(index_song0 +1);
+
+      if(button_song0 == "next"){
+        input = 0;
+      }else if(button_song0 =="play"){
+        input = 1;
+      }else if (button_song0 == "stop"){
+        input = 2;
+      }
+
+      if(input!=-1){
+        mySerial.println(input); //cstate
+        checkstate = 1;
+        break;      
+      }
+
+    }
+  }
+}
+
+void current_song1(){
+  for(int i=0;i<numHBD;i++){
+
+    if(mySerial.available()){
+      String stop = mySerial.readStringUntil('\n');
+      stop.trim();
+
+      int index_stop = stop.indexOf(';');
+      String button_stop = stop.substring(0,index_stop);
+      String isPlaying = stop.substring(index_stop +1);
+      int isPlay = isPlaying.toInt();
+
+      if(isPlay = 0 || button_stop == stop){
+      noTone(SpeakerPin);
+      break;
+      }
+    }
+    
+    tone(SpeakerPin, HBD[i]);
+    delay(200);
+    noTone(SpeakerPin);
+    delay(100);
+
+    //7-segment
+    for (int i=0; i<numPins; i++){
+      boolean isBitSet = bitRead(bitPattern[1], i);
+      Serial.println(isBitSet);
+      digitalWrite(segmentPins[i],isBitSet);
+    }
+
+    // อ่านปุ่ม
+    if(mySerial.available()){
+      String data_1 = mySerial.readStringUntil('\n');
+      data_1.trim();
+
+      int index_song1 =data_1.indexOf(',');
+      String button_song1 = data_1.substring(0,index_song1);
+      // String current = data.substring(index_song0 +1);
+
+      if(button_song1 == "next"){
+        input = 0;
+      }else if(button_song1 =="play"){
+        input = 1;
+      }else if (button_song1 == "stop"){
+        input = 2;
+      }
+
+      if(input!=-1){
+        mySerial.println(input); //cstate
+        checkstate = 1;
+        break;      
+      }
+
+    }
+  }
+}
+
+void current_song2(){
+  Serial.begin(9600);
+  for(int i=0;i<numLittleStar;i++){
+    
+    if(mySerial.available()){
+      String stop = mySerial.readStringUntil('\n');
+      stop.trim();
+
+      int index_stop = stop.indexOf(';');
+      String button_stop = stop.substring(0,index_stop);
+      String isPlaying = stop.substring(index_stop +1);
+      int isPlay = isPlaying.toInt();
+
+      if(isPlay = 0 || button_stop == stop){
+      noTone(SpeakerPin);
+      break;
+      }
+    }
+    
+    tone(SpeakerPin, LittleStar[i]);
+    delay(200);
+    noTone(SpeakerPin);
+    delay(100);
+
+    //7-segment
+    for (int i=0; i<numPins; i++){
+      boolean isBitSet = bitRead(bitPattern[2], i);
+      Serial.println(isBitSet);
+      digitalWrite(segmentPins[i],isBitSet);
+    }
+
+
+    // อ่านปุ่ม
+    if(mySerial.available()){
+      String data_2 = mySerial.readStringUntil('\n');
+      data_2.trim();
+
+      int index_song2 =data_2.indexOf(',');
+      String button_song2 = data_2.substring(0,index_song2);
+      // String current = data.substring(index_song0 +1);
+
+      if(button_song2 == "next"){
+        input = 0;
+      }else if(button_song2 =="play"){
+        input = 1;
+      }else if (button_song2 == "stop"){
+        input = 2;
+      }
+
+      if(input!=-1){
+        mySerial.println(input); //cstate
+        checkstate = 1;
+        break;      
+      }
+
+    }
+    }
+  }
+
+
+void setup() {
+   Serial.begin(9600);
+   mySerial.begin(9600);
+  
+  for (int i=0; i<numPins; i++){
+    pinMode(segmentPins[i], OUTPUT);
+  }
+
+  pinMode(SpeakerPin, OUTPUT);
+}
+
+void loop() {
+  if(mySerial.available()){
+    String text = mySerial.readStringUntil('\n');
+    text.trim(); // ตัดช่องว่างและ \r\n ออก
+    Serial.println(text);
+
+    int index = text.indexOf(',');
+    String button = text.substring(0,index);
+    Serial.println(button);
+    String current = text.substring(index+1);
+    int current_song = current.toInt();
+    Serial.println(current_song);
+
+    // int input = -1;
+    // if(button == "next") input = 0;
+    // else if(button == "play") input = 1;
+    // else if(button == "before") input = 2;
+  
+  //before
+    if (button == "before" || button == "next"){
+      if(button == "before"){
+        Serial.println("State Before");
+      }
+      else if(button == "next"){
+        Serial.println("State Next");
+      }
+
+      Serial.print("Current Song = "); Serial.println(current_song);
+      if(current_song == 0){
+        current_song0();
+      }
+      else if(current_song == 1){
+        current_song1();
+      }
+      else if(current_song == 2){
+        current_song2();
+      }
+      
+    }
+
+    //play
+    else if (button == "play" || button == "stop"){   
+      if(button == "play"){
+        Serial.println("State Play");
+        if(current_song == 0){
+          current_song0();
+        }
+        else if(current_song == 1){
+          current_song1();
+        }
+        else if(current_song == 2){
+          current_song2();
+        }
+      }else if(button = "stop"){
+        noTone(SpeakerPin);
+      }
+    }
+
+    // 
+  }
+}
